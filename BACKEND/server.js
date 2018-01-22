@@ -19,8 +19,7 @@ var router = express.Router();
 
 //Routes that end in survivors
 var Survivor = require('./models/survivor');
-var Inventory = require('./models/inventory');
-var Infection = require('./models/infection');
+var Report = require('./models/reports');
 
 router.route('/survivors')
 
@@ -110,13 +109,133 @@ router.route('/survivors/:survivor_id')
 router.route('/survivors/:survivor_id/infection')
     
     .get(function(req, res){
-        Infection.find(function(err, infection) {
+        Survivor.findById(req.params.survivor_id, function(err, survivor){
+            if(err)
+                res.send(err)
+            res.json(survivor.infection)
+        })
+    })
+
+    .put(function(req, res){
+        Survivor.findById(req.body.reportedId, function(err, survivor){
+            if(err)
+                res.send(err);
+            
+            var exists = false;
+            survivor.infection.reportersId.forEach(element => {
+                if(element == req.body.reporterId)
+                    exists = true; 
+            })
+            
+            if(!exists){
+                survivor.infection.reportersId.push(req.body.reporterId);
+                survivor.infection.reports += 1;
+                if(survivor.infection.reports > 2)
+                    survivor.infection.isInfected = true;
+        
+                survivor.save(function(err){
+                    if(err)
+                        res.send(err)
+                    res.json({ message: "Infection updated"})
+                })
+            }
+            else
+                res.json({ message: "Infection already reported by this survivor" })
+        })
+    })
+
+router.route('/survivors/:survivor_id/inventory')
+
+    .get(function(req, res){
+        Survivor.findById(req.params.survivor_id, function(err, survivor) {
+            if(err)
+                res.json(err)
+            res.json(survivor.inventory);
+        })
+    })
+
+    .put(function(req, res) {
+        
+        Survivor.findById(req.params.survivor_id, function(err, survivor){
+
+            var pickItems = req.body.pickItems;
+            var payItems = req.body.payItems;
+
+            pickItems.value = pickItems.water * 4,
+                                pickItems.food * 3,
+                                pickItems.medication * 2,
+                                pickItems.ammunition * 1;
+            
+            payItems.value = payItems.water * 4,
+                                payItems.food * 3,
+                                payItems.medication * 2,
+                                payItems.ammunition * 1;
+
+            if(pickItems.value == payItems.value){
+                if(survivor.inventory.water >= pickItems.water &&
+                    survivor.inventory.food >= pickItems.food &&
+                    survivor.inventory.medication >= pickItems.medication &&
+                    survivor.inventory.ammunition >= pickItems.ammunition &&
+                    !survivor.infection.isInfected){
+                        survivor.inventory.water += pickItems.water;
+                        survivor.inventory.food += pickItems.food;
+                        survivor.inventory.medication += pickItems.medication;
+                        survivor.inventory.ammunition += pickItems.ammunition;
+
+                        survivor.inventory.water -= payItems.water;
+                        survivor.inventory.food -= payItems.food;
+                        survivor.inventory.medication -= payItems.medication;
+                        survivor.inventory.ammunition -= payItems.ammunition;
+
+                        res.json({ message: "Troca realizada com sucesso!"})
+
+                }
+                else{
+                    res.json({ message: "Não foi possível completar a troca, items insuficientes ou usuário infectado."})
+                }
+            }
+        })
+    })
+
+router.route('/reports')
+    .get(function(req, res){
+        Survivor.find(function(err, survivors) {
             if (err)
                 res.send(err);
 
-            res.json(infection);
+            var report = new Report();
+            report.nonInfectedSurvivors = 0;
+            report.totalSurvivors = 0;
+            report.items = {
+                water: 0,
+                food: 0,
+                medication: 0,
+                ammunition: 0,
+            };
+            survivors.forEach(element => {
+                report.totalSurvivors += 1;
+                if(!element.infection.isInfected){
+                    report.nonInfectedSurvivors += 1;
+                    report.items.water += element.inventory.water;
+                    report.items.food += element.inventory.food;
+                    report.items.medication += element.inventory.medication;
+                    report.items.ammunition += element.inventory.ammunition;
+                }
+            })
+            report.infectedSurvivors = report.totalSurvivors - report.nonInfectedSurvivors;
+            report.totalItems = report.items.water 
+                                + report.items.food 
+                                + report.items.medication 
+                                + report.items.ammunition;
+
+            report.items.water = report.items.water/report.totalItems;
+            report.items.food = report.items.food/report.totalItems;
+            report.items.medication = report.items.medication/report.totalItems;
+            report.items.ammunition = report.items.ammunition/report.totalItems;
+            res.json(report);
         });
     })
+
 
 
 

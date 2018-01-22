@@ -7,14 +7,29 @@ var SurvivorSchema   = new Schema({
     gender: { type: String, required: true},
     latitude: Number,
     longitude: Number,
-    inventory: { water: Number,
-                 food: Number,
-                 medication: Number,
-                 ammunition: Number},
+    inventory: { water: {
+                    type: Number,
+                    default: 0,
+                    },
+
+                 food: {
+                    type: Number,
+                    default: 0,
+                    },
+                medication: {
+                    type: Number,
+                    default: 0,
+                    },
+                 ammunition: {
+                    type: Number,
+                    default: 0,
+                    },
+                },
     
     infection: {
         reports: Number,
         isInfected: Boolean,
+        reportersId: Array,
     }
 })
 
