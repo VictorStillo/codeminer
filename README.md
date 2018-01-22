@@ -39,3 +39,7 @@ Solving the [BACKEND ZNSS Test](https://gist.github.com/akitaonrails/711b5553533
         requires: survivorId1, survivorId2, water1, water2, food1, food2, medication1, medication2, ammunition1, ammunition2;  
 
 ps.: item1 is the item offered by the survivor1 and item2 is the item offered by the survivor2.  
+
+
+**/api/reports**  
+    .get - Generate Reports  
